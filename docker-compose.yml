@@ -43,6 +43,8 @@ services:
     container_name: paperless
     depends_on:
       - broker
+      - gotenberg
+      - tika
     ports:
       - "127.0.0.1:8010:8000"
     healthcheck:
@@ -81,6 +83,25 @@ services:
       # documents are written in.
       PAPERLESS_OCR_LANGUAGE: ${PAPERLESS_OCR_LANGUAGE:?error}
       PAPERLESS_URL: ${PAPERLESS_URL:?error}
+      # Use Tika and Gotenberg to convert emails and other document types to PDF.
+      PAPERLESS_TIKA_ENABLED: 1
+      PAPERLESS_TIKA_GOTENBERG_ENDPOINT: http://gotenberg:3000
+      PAPERLESS_TIKA_ENDPOINT: http://tika:9998
+
+ gotenberg:
+    image: docker.io/gotenberg/gotenberg:7.8
+    restart: unless-stopped
+
+    # The gotenberg chromium route is used to convert .eml files. We do not
+    # want to allow external content like tracking pixels or even javascript.
+    command:
+      - "gotenberg"
+      - "--chromium-disable-javascript=true"
+      - "--chromium-allow-list=file:///tmp/.*"
+
+  tika:
+    image: ghcr.io/paperless-ngx/tika:latest
+    restart: unless-stopped
 
 volumes:
   # Paperless data volume.
